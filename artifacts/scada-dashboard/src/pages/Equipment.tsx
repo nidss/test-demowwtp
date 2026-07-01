@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { AppShell } from "@/components/scada/AppShell";
-import { useBuildingConfigs, useBuildingsLive, BuildingConfig, BuildingEquipmentConfig } from "@/lib/buildings";
+import { useBuildingConfigs, useBuildingsLive, buildingsStore, BuildingConfig, BuildingEquipmentConfig } from "@/lib/buildings";
+import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Activity, Power, PowerOff, AlertTriangle, Settings2, Clock, Wrench, Cpu, Zap, Wind, Droplets, Filter, Gauge, HelpCircle, Monitor, ToggleLeft } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, YAxis } from "recharts";
@@ -53,7 +55,17 @@ function enrichEquipment(building: BuildingConfig): EquipmentWithBuilding[] {
 
 const generateSparkline = () => Array.from({ length: 20 }, () => ({ val: 40 + Math.random() * 20 }));
 
-function EquipmentCard({ eq, onClick }: { eq: EquipmentWithBuilding; onClick: () => void }) {
+function EquipmentCard({
+  eq,
+  onClick,
+  onToggle,
+  canControl,
+}: {
+  eq: EquipmentWithBuilding;
+  onClick: () => void;
+  onToggle: (turnOn: boolean) => void;
+  canControl: boolean;
+}) {
   const isRunning = eq.status === "running";
   const isFault = eq.status === "fault";
   const sparkData = React.useMemo(generateSparkline, []);
@@ -84,12 +96,21 @@ function EquipmentCard({ eq, onClick }: { eq: EquipmentWithBuilding; onClick: ()
             <div className="text-[10px] font-mono text-muted-foreground uppercase">{eq.kind}</div>
           </div>
         </div>
-        <Badge variant="outline" className={cn("font-mono text-xs shrink-0", isRunning ? "bg-green-500/10 text-green-500 border-green-500/50" : isFault ? "bg-red-500/10 text-red-500 border-red-500/50 animate-pulse" : "bg-muted text-muted-foreground")}>
-          {isRunning && <Power className="w-3 h-3 mr-1" />}
-          {isFault && <AlertTriangle className="w-3 h-3 mr-1" />}
-          {eq.status === "stopped" && <PowerOff className="w-3 h-3 mr-1" />}
-          {eq.status.toUpperCase()}
-        </Badge>
+        <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <Badge variant="outline" className={cn("font-mono text-xs", isRunning ? "bg-green-500/10 text-green-500 border-green-500/50" : isFault ? "bg-red-500/10 text-red-500 border-red-500/50 animate-pulse" : "bg-muted text-muted-foreground")}>
+            {isRunning && <Power className="w-3 h-3 mr-1" />}
+            {isFault && <AlertTriangle className="w-3 h-3 mr-1" />}
+            {eq.status === "stopped" && <PowerOff className="w-3 h-3 mr-1" />}
+            {eq.status.toUpperCase()}
+          </Badge>
+          <Switch
+            checked={isRunning}
+            onCheckedChange={onToggle}
+            disabled={!canControl}
+            title={canControl ? (isRunning ? "หยุดเครื่อง" : "เดินเครื่อง") : "ไม่มีสิทธิ์ควบคุมเครื่องจักร"}
+            aria-label={`เปิด/ปิด ${eq.nameTh}`}
+          />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="flex justify-between items-end mb-3">
@@ -130,7 +151,19 @@ function EquipmentCard({ eq, onClick }: { eq: EquipmentWithBuilding; onClick: ()
   );
 }
 
-function BuildingSection({ building, equipment, onSelect }: { building: BuildingConfig; equipment: EquipmentWithBuilding[]; onSelect: (eq: EquipmentWithBuilding) => void }) {
+function BuildingSection({
+  building,
+  equipment,
+  onSelect,
+  onToggle,
+  canControl,
+}: {
+  building: BuildingConfig;
+  equipment: EquipmentWithBuilding[];
+  onSelect: (eq: EquipmentWithBuilding) => void;
+  onToggle: (eq: EquipmentWithBuilding, turnOn: boolean) => void;
+  canControl: boolean;
+}) {
   const running = equipment.filter((e) => e.status === "running").length;
   const fault   = equipment.filter((e) => e.status === "fault").length;
   const stopped = equipment.filter((e) => e.status === "stopped").length;
@@ -154,7 +187,13 @@ function BuildingSection({ building, equipment, onSelect }: { building: Building
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {[...equipment.filter(e => e.status === "fault"), ...equipment.filter(e => e.status === "running"), ...equipment.filter(e => e.status === "stopped")].map((eq) => (
-          <EquipmentCard key={eq.id} eq={eq} onClick={() => onSelect(eq)} />
+          <EquipmentCard
+            key={eq.id}
+            eq={eq}
+            onClick={() => onSelect(eq)}
+            onToggle={(turnOn) => onToggle(eq, turnOn)}
+            canControl={canControl}
+          />
         ))}
       </div>
     </div>
@@ -163,8 +202,15 @@ function BuildingSection({ building, equipment, onSelect }: { building: Building
 
 export default function EquipmentPage() {
   const buildings = useBuildingConfigs();
+  const { perms } = useAuth();
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>("all");
   const [selectedEq, setSelectedEq] = useState<EquipmentWithBuilding | null>(null);
+
+  const handleToggle = (eq: EquipmentWithBuilding, turnOn: boolean) => {
+    buildingsStore.updateEquipment(eq.building.id, eq.id, {
+      status: turnOn ? "running" : "stopped",
+    });
+  };
 
   const allEnriched = buildings.map((b) => enrichEquipment(b));
 
@@ -247,7 +293,13 @@ export default function EquipmentPage() {
             return (
               <React.Fragment key={b.id}>
                 {idx > 0 && selectedBuildingId === "all" && <div className="border-t border-border/40" />}
-                <BuildingSection building={b} equipment={enriched} onSelect={setSelectedEq} />
+                <BuildingSection
+                  building={b}
+                  equipment={enriched}
+                  onSelect={setSelectedEq}
+                  onToggle={handleToggle}
+                  canControl={perms.canEditEquipment}
+                />
               </React.Fragment>
             );
           })}
