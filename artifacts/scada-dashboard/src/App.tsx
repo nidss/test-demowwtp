@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 
-import Home from "@/pages/Home";
 import Trends from "@/pages/Trends";
 import Alarms from "@/pages/Alarms";
 import EquipmentPage from "@/pages/Equipment";
@@ -17,23 +16,19 @@ import HospitalOverview from "@/pages/HospitalOverview";
 import TasksPage from "@/pages/Tasks";
 import CalendarPage from "@/pages/Calendar";
 import { RoleGate } from "@/components/scada/RoleGate";
-import { useAuth } from "@/lib/auth";
 
 const queryClient = new QueryClient();
 
-// Redirects super_admin to /network; all others see the WWTP Home dashboard
+// The app's home page is the Siriraj hospital view (merged WWTP dashboard).
+// /network is hidden from the nav, so "/" sends everyone straight there.
 function LandingPage() {
-  const { role } = useAuth();
   const [, navigate] = useLocation();
 
   useEffect(() => {
-    if (role === "super_admin") {
-      navigate("/network", { replace: true });
-    }
-  }, [role]);
+    navigate("/hospital/h-siriraj", { replace: true });
+  }, []);
 
-  if (role === "super_admin") return null;
-  return <Home />;
+  return null;
 }
 
 function Router() {
@@ -81,8 +76,11 @@ function Router() {
           <NetworkPage />
         </RoleGate>
       </Route>
+      {/* Gated by canViewOverview (not canViewNetwork) because /hospital/h-siriraj
+          is now the app's home page — reachable by every role that could see
+          the old Home dashboard, not just those with Network access. */}
       <Route path="/hospital/:id">
-        <RoleGate needs="canViewNetwork">
+        <RoleGate needs="canViewOverview">
           <HospitalOverview />
         </RoleGate>
       </Route>

@@ -29,6 +29,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useScadaData, useAlarms } from "@/lib/scada-mock";
 import { useAuth, ROLE_INFOS, type Permissions } from "@/lib/auth";
 
+const SHOW_NETWORK_NAV = false;
+
 interface AppShellProps {
   children: ReactNode;
 }
@@ -86,7 +88,11 @@ export function AppShell({ children }: AppShellProps) {
     { href: "/tasks", icon: ListChecks, label: "Tasks", labelTh: "งานและ|รายการ", needs: "canViewTasks" },
     { href: "/calendar", icon: CalendarIcon, label: "Calendar", labelTh: "ปฏิทิน|นัดหมาย", needs: "canViewCalendar" },
     { href: "/settings", icon: Sliders, label: "Settings", labelTh: "ตั้งค่า", needs: "canViewSettings" },
-    { href: "/network", icon: Globe, label: "Network", labelTh: "เครือข่าย|ทั่วประเทศ", needs: "canViewNetwork" },
+    // Network is kept out of the nav (home is now /hospital/h-siriraj), but
+    // the route/page itself is still intact if it's needed again.
+    ...(SHOW_NETWORK_NAV
+      ? [{ href: "/network", icon: Globe, label: "Network", labelTh: "เครือข่าย|ทั่วประเทศ", needs: "canViewNetwork" as const }]
+      : []),
   ];
   const navItems = allNavItems.filter((item) => perms[item.needs]);
 

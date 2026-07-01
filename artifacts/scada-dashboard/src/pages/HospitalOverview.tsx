@@ -30,6 +30,7 @@ import {
 } from "@/lib/network-data";
 import { useBuildingConfigs, useBuildingsLive } from "@/lib/buildings";
 import { BuildingDetailContent } from "@/pages/BuildingDetail";
+import { useAuth } from "@/lib/auth";
 
 // ─── Hospital detail (national network) ──────────────────────────────────────
 //
@@ -45,6 +46,7 @@ const SELECTED_BUILDING_KEY = "scada.wwtp.selectedBuilding";
 export default function HospitalOverview() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
+  const { perms } = useAuth();
 
   const hospital = useMemo<NetworkHospital | undefined>(
     () => HOSPITALS.find((h) => h.id === id),
@@ -120,10 +122,10 @@ export default function HospitalOverview() {
           <p className="text-muted-foreground font-mono">ไม่พบข้อมูลโรงพยาบาลนี้</p>
           <button
             type="button"
-            onClick={() => navigate("/network")}
+            onClick={() => navigate(perms.canViewNetwork ? "/network" : "/")}
             className="flex items-center gap-2 text-sm text-primary hover:underline font-mono"
           >
-            <ArrowLeft className="h-4 w-4" /> กลับหน้าเครือข่าย
+            <ArrowLeft className="h-4 w-4" /> กลับหน้าหลัก
           </button>
         </div>
       </AppShell>
@@ -137,14 +139,17 @@ export default function HospitalOverview() {
   return (
     <AppShell>
       <div className="flex flex-col gap-6 w-full max-w-[1300px] mx-auto pb-12">
-        {/* Breadcrumb */}
-        <button
-          type="button"
-          onClick={() => navigate("/network")}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors font-mono w-fit"
-        >
-          <ArrowLeft className="h-4 w-4" /> เครือข่ายทั่วประเทศ
-        </button>
+        {/* Breadcrumb — only shown for roles that can actually browse the
+            network list; for everyone else this page IS the home page. */}
+        {perms.canViewNetwork && (
+          <button
+            type="button"
+            onClick={() => navigate("/network")}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors font-mono w-fit"
+          >
+            <ArrowLeft className="h-4 w-4" /> เครือข่ายทั่วประเทศ
+          </button>
+        )}
 
         {/* Header */}
         <div className="flex items-start gap-4 flex-wrap">
