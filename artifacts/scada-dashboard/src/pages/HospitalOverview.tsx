@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import {
   ArrowLeft,
@@ -16,18 +16,31 @@ import {
 import { cn } from "@/lib/utils";
 import { AppShell } from "@/components/scada/AppShell";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   HOSPITALS,
   REGION_INFO,
   STATUS_CONFIG,
   type NetworkHospital,
 } from "@/lib/network-data";
+import { useBuildingConfigs, useBuildingsLive } from "@/lib/buildings";
+import { BuildingDetailContent } from "@/pages/BuildingDetail";
 
 // ─── Hospital detail (national network) ──────────────────────────────────────
 //
 // Reached from the Network page when an operator clicks a hospital card. The
-// only Siriraj entry that's "connected" drills into the live WWTP dashboard;
-// every other hospital shows summary network telemetry (mock) since they're not
-// wired into the live SCADA feed.
+// only Siriraj entry that's "connected" shows the live per-building WWTP
+// dashboard (same content as /wwtp) appended below the network summary, so
+// operators see everything on one page without an extra click.
+
+// Same key used by the standalone /wwtp page so the selected building stays
+// in sync regardless of which page the operator picked it from.
+const SELECTED_BUILDING_KEY = "scada.wwtp.selectedBuilding";
 
 export default function HospitalOverview() {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +49,67 @@ export default function HospitalOverview() {
   const hospital = useMemo<NetworkHospital | undefined>(
     () => HOSPITALS.find((h) => h.id === id),
     [id],
+  );
+
+  // WWTP building data — hooks run unconditionally (regardless of whether
+  // `hospital` resolves or is connected) so hook order stays stable across
+  // navigations between different hospital ids.
+  const buildingConfigs = useBuildingConfigs();
+  const buildingLiveAll = useBuildingsLive();
+  const sortedBuildings = useMemo(
+    () => [...buildingConfigs].sort((a, b) => a.order - b.order),
+    [buildingConfigs],
+  );
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string>(() => {
+    try {
+      return localStorage.getItem(SELECTED_BUILDING_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
+
+  useEffect(() => {
+    if (sortedBuildings.length === 0) return;
+    const stillExists = sortedBuildings.some((b) => b.id === selectedBuildingId);
+    if (!stillExists) {
+      setSelectedBuildingId(sortedBuildings[0].id);
+    }
+  }, [sortedBuildings, selectedBuildingId]);
+
+  const onSelectBuilding = (buildingId: string) => {
+    setSelectedBuildingId(buildingId);
+    try {
+      localStorage.setItem(SELECTED_BUILDING_KEY, buildingId);
+    } catch {
+      /* ignore quota / privacy-mode errors */
+    }
+  };
+
+  const buildingConfig =
+    sortedBuildings.find((b) => b.id === selectedBuildingId) ?? sortedBuildings[0];
+  const buildingLive = buildingConfig ? buildingLiveAll[buildingConfig.id] : undefined;
+
+  const buildingSelector = (
+    <div className="flex flex-col gap-1 shrink-0">
+      <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+        เลือกตึก · SELECT BUILDING
+      </span>
+      <Select value={buildingConfig?.id ?? ""} onValueChange={onSelectBuilding}>
+        <SelectTrigger className="w-[260px]">
+          <SelectValue placeholder="เลือกตึก" />
+        </SelectTrigger>
+        <SelectContent>
+          {sortedBuildings.map((b) => (
+            <SelectItem key={b.id} value={b.id}>
+              <span className="font-medium">{b.nameTh}</span>
+              <span className="text-muted-foreground font-mono text-xs ml-1.5">
+                ({b.code})
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 
   if (!hospital) {
@@ -109,16 +183,6 @@ export default function HospitalOverview() {
               {hospital.nameEn}
             </p>
           </div>
-
-          {hospital.connected && (
-            <button
-              type="button"
-              onClick={() => navigate("/wwtp")}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-mono font-bold hover:bg-primary/90 transition-colors"
-            >
-              เปิด Dashboard ระบบบำบัด →
-            </button>
-          )}
         </div>
 
         {/* KPI grid */}
@@ -214,6 +278,23 @@ export default function HospitalOverview() {
           <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4 text-center text-sm text-muted-foreground">
             โรงพยาบาลนี้ยังไม่ได้เชื่อมต่อกับระบบ SCADA กลาง — แสดงเฉพาะข้อมูลสรุปเครือข่าย
             ส่วนข้อมูลเรียลไทม์ระดับถัง/อุปกรณ์มีเฉพาะโรงพยาบาลศิริราชที่เชื่อมต่อแล้ว
+          </div>
+        )}
+
+        {hospital.connected && buildingConfig && buildingLive && (
+          <div className="flex flex-col gap-4 pt-2">
+            <div className="flex items-center gap-2 border-t border-border pt-6">
+              <Droplets className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-bold uppercase tracking-wide text-foreground">
+                Dashboard ระบบบำบัดน้ำเสีย (WWTP)
+              </h2>
+            </div>
+            <BuildingDetailContent
+              key={buildingConfig.id}
+              config={buildingConfig}
+              live={buildingLive}
+              headerAccessory={buildingSelector}
+            />
           </div>
         )}
       </div>
