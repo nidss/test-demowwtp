@@ -10,7 +10,6 @@ import Trends from "@/pages/Trends";
 import Alarms from "@/pages/Alarms";
 import EquipmentPage from "@/pages/Equipment";
 import SettingsPage from "@/pages/Settings";
-import UsersPage from "@/pages/Users";
 import BuildingDetail from "@/pages/BuildingDetail";
 import WwtpDashboard from "@/pages/WwtpDashboard";
 import NetworkPage from "@/pages/Network";
@@ -70,11 +69,6 @@ function Router() {
       <Route path="/settings">
         <RoleGate needs="canViewSettings">
           <SettingsPage />
-        </RoleGate>
-      </Route>
-      <Route path="/users">
-        <RoleGate needs="canViewUsers">
-          <UsersPage />
         </RoleGate>
       </Route>
       <Route path="/building/:id">

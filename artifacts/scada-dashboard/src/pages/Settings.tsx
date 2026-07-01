@@ -54,8 +54,13 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { ScadaDiagramEditor } from "@/components/scada/ScadaDiagramEditor";
+import { UsersPanel } from "@/pages/Users";
 import { Workflow } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Tanks/Equipment/Diagram are per-building config tabs that aren't needed
+// right now — kept in place (not deleted) in case they're needed again.
+const SHOW_ADVANCED_TABS = false;
 
 const TANK_KINDS: { value: TankKind; label: string }[] = [
   { value: "equalization", label: "Equalization · ปรับสภาพ" },
@@ -99,6 +104,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const { perms, roleInfo } = useAuth();
   const canEdit = perms.canEditConfigs;
+  const canViewUsers = perms.canViewUsers;
 
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>(
     buildings[0]?.id ?? "",
@@ -141,8 +147,8 @@ export default function SettingsPage() {
                 ตั้งค่าแยกตามตึก / Per-Building Configuration
               </strong>
               <span className="text-muted-foreground">
-                เพิ่ม/ลบ/แก้ไขตึกได้ที่แท็บ "ตึก" และตั้งค่าถังบำบัด/เครื่องจักรของแต่ละตึก
-                แยกกันได้ที่แท็บอื่น
+                เพิ่ม/ลบ/แก้ไขตึกได้ที่แท็บ "ตึก"
+                {canViewUsers && ' และจัดการผู้ใช้งาน/สิทธิ์ได้ที่แท็บ "ผู้ใช้"'}
               </span>
             </div>
           </div>
@@ -154,16 +160,25 @@ export default function SettingsPage() {
               <TabsTrigger value="buildings" data-testid="tab-buildings">
                 ตึก / Buildings
               </TabsTrigger>
-              <TabsTrigger value="tanks" data-testid="tab-tanks">
-                ถังบำบัด / Tanks
-              </TabsTrigger>
-              <TabsTrigger value="equipment" data-testid="tab-equipment">
-                เครื่องจักร / Equipment
-              </TabsTrigger>
-              <TabsTrigger value="diagram" data-testid="tab-diagram" className="gap-1.5">
-                <Workflow className="w-3.5 h-3.5" />
-                กระบวนการ / Diagram
-              </TabsTrigger>
+              {SHOW_ADVANCED_TABS && (
+                <>
+                  <TabsTrigger value="tanks" data-testid="tab-tanks">
+                    ถังบำบัด / Tanks
+                  </TabsTrigger>
+                  <TabsTrigger value="equipment" data-testid="tab-equipment">
+                    เครื่องจักร / Equipment
+                  </TabsTrigger>
+                  <TabsTrigger value="diagram" data-testid="tab-diagram" className="gap-1.5">
+                    <Workflow className="w-3.5 h-3.5" />
+                    กระบวนการ / Diagram
+                  </TabsTrigger>
+                </>
+              )}
+              {canViewUsers && (
+                <TabsTrigger value="users" data-testid="tab-users">
+                  ผู้ใช้ / Users
+                </TabsTrigger>
+              )}
             </TabsList>
             <Button
               variant="outline"
@@ -180,47 +195,57 @@ export default function SettingsPage() {
             <BuildingsTab buildings={buildings} canEdit={canEdit} />
           </TabsContent>
 
-          <TabsContent value="tanks">
-            <BuildingScopedTab
-              buildings={buildings}
-              selectedId={selectedBuildingId}
-              onSelect={setSelectedBuildingId}
-            >
-              {selectedBuilding ? (
-                <TanksTab building={selectedBuilding} canEdit={canEdit} />
-              ) : (
-                <EmptyState />
-              )}
-            </BuildingScopedTab>
-          </TabsContent>
+          {SHOW_ADVANCED_TABS && (
+            <>
+              <TabsContent value="tanks">
+                <BuildingScopedTab
+                  buildings={buildings}
+                  selectedId={selectedBuildingId}
+                  onSelect={setSelectedBuildingId}
+                >
+                  {selectedBuilding ? (
+                    <TanksTab building={selectedBuilding} canEdit={canEdit} />
+                  ) : (
+                    <EmptyState />
+                  )}
+                </BuildingScopedTab>
+              </TabsContent>
 
-          <TabsContent value="equipment">
-            <BuildingScopedTab
-              buildings={buildings}
-              selectedId={selectedBuildingId}
-              onSelect={setSelectedBuildingId}
-            >
-              {selectedBuilding ? (
-                <EquipmentTab building={selectedBuilding} canEdit={canEdit} />
-              ) : (
-                <EmptyState />
-              )}
-            </BuildingScopedTab>
-          </TabsContent>
+              <TabsContent value="equipment">
+                <BuildingScopedTab
+                  buildings={buildings}
+                  selectedId={selectedBuildingId}
+                  onSelect={setSelectedBuildingId}
+                >
+                  {selectedBuilding ? (
+                    <EquipmentTab building={selectedBuilding} canEdit={canEdit} />
+                  ) : (
+                    <EmptyState />
+                  )}
+                </BuildingScopedTab>
+              </TabsContent>
 
-          <TabsContent value="diagram">
-            <BuildingScopedTab
-              buildings={buildings}
-              selectedId={selectedBuildingId}
-              onSelect={setSelectedBuildingId}
-            >
-              {selectedBuilding ? (
-                <DiagramTab building={selectedBuilding} canEdit={canEdit} />
-              ) : (
-                <EmptyState />
-              )}
-            </BuildingScopedTab>
-          </TabsContent>
+              <TabsContent value="diagram">
+                <BuildingScopedTab
+                  buildings={buildings}
+                  selectedId={selectedBuildingId}
+                  onSelect={setSelectedBuildingId}
+                >
+                  {selectedBuilding ? (
+                    <DiagramTab building={selectedBuilding} canEdit={canEdit} />
+                  ) : (
+                    <EmptyState />
+                  )}
+                </BuildingScopedTab>
+              </TabsContent>
+            </>
+          )}
+
+          {canViewUsers && (
+            <TabsContent value="users">
+              <UsersPanel />
+            </TabsContent>
+          )}
         </Tabs>
 
         <AlertDialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>

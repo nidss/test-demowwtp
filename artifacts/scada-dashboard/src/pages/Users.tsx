@@ -69,7 +69,17 @@ const PERM_ROWS: { key: keyof Permissions; label: string }[] = [
   { key: "canExportReports", label: "ส่งออกรายงาน" },
 ];
 
+// Default page export kept for direct-route use; the Settings page embeds
+// `UsersPanel` directly (without this AppShell wrapper) as its "Users" tab.
 export default function UsersPage() {
+  return (
+    <AppShell>
+      <UsersPanel />
+    </AppShell>
+  );
+}
+
+export function UsersPanel() {
   const { users, currentUser, addUser, updateUser, removeUser, resetUsers, switchUser } =
     useAuth();
 
@@ -88,7 +98,7 @@ export default function UsersPage() {
   };
 
   return (
-    <AppShell>
+    <>
       <div className="flex flex-col gap-6 w-full max-w-[1400px] mx-auto pb-12">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -293,7 +303,7 @@ export default function UsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </AppShell>
+    </>
   );
 }
 

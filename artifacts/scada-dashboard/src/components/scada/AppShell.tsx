@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
-  Users as UsersIcon,
   LogOut,
   ShieldCheck,
   PanelLeftClose,
@@ -87,7 +86,6 @@ export function AppShell({ children }: AppShellProps) {
     { href: "/tasks", icon: ListChecks, label: "Tasks", labelTh: "งานและ|รายการ", needs: "canViewTasks" },
     { href: "/calendar", icon: CalendarIcon, label: "Calendar", labelTh: "ปฏิทิน|นัดหมาย", needs: "canViewCalendar" },
     { href: "/settings", icon: Sliders, label: "Settings", labelTh: "ตั้งค่า", needs: "canViewSettings" },
-    { href: "/users", icon: UsersIcon, label: "Users", labelTh: "จัดการ|ผู้ใช้", needs: "canViewUsers" },
     { href: "/network", icon: Globe, label: "Network", labelTh: "เครือข่าย|ทั่วประเทศ", needs: "canViewNetwork" },
   ];
   const navItems = allNavItems.filter((item) => perms[item.needs]);
