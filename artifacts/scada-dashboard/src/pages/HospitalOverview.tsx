@@ -32,6 +32,7 @@ import {
 } from "@/lib/network-data";
 import { useBuildingConfigs, useBuildingsLive } from "@/lib/buildings";
 import { BuildingDetailContent } from "@/pages/BuildingDetail";
+import { useAuth } from "@/lib/auth";
 
 // ─── Hospital detail (national network) ──────────────────────────────────────
 //
@@ -47,6 +48,7 @@ const SELECTED_BUILDING_KEY = "scada.wwtp.selectedBuilding";
 export default function HospitalOverview() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
+  const { perms } = useAuth();
 
   const hospital = useMemo<NetworkHospital | undefined>(
     () => HOSPITALS.find((h) => h.id === id),
@@ -170,9 +172,10 @@ export default function HospitalOverview() {
   return (
     <AppShell>
       <div className="flex flex-col gap-6 w-full max-w-[1300px] mx-auto pb-12">
-        {/* Hospital selector — replaces the old "back to network" breadcrumb
-            since this page is now the home page for every role. */}
-        {hospitalSelector}
+        {/* Hospital selector — only for roles that can actually browse the
+            network (currently super_admin). Everyone else's home page is
+            fixed at /hospital/h-siriraj, so there's nothing to switch to. */}
+        {perms.canViewNetwork && hospitalSelector}
 
         {/* Header */}
         <div className="flex items-start gap-4 flex-wrap">
