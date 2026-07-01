@@ -28,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useScadaData, useAlarms } from "@/lib/scada-mock";
 import { useAuth, ROLE_INFOS, type Permissions } from "@/lib/auth";
+import { HOSPITALS } from "@/lib/network-data";
 
 const SHOW_NETWORK_NAV = false;
 
@@ -45,6 +46,15 @@ interface NavItem {
 
 export function AppShell({ children }: AppShellProps) {
   const [location, navigate] = useLocation();
+
+  // Header title follows the currently viewed hospital on /hospital/:id
+  // (e.g. after picking a different one from the selector dropdown);
+  // everywhere else it falls back to Siriraj, the default plant.
+  const hospitalIdMatch = location.match(/^\/hospital\/([^/]+)/);
+  const currentHospital = hospitalIdMatch
+    ? HOSPITALS.find((h) => h.id === hospitalIdMatch[1])
+    : undefined;
+  const orgNameTh = currentHospital?.nameTh ?? "โรงพยาบาลศิริราช";
   const { kpi } = useScadaData();
   const { alarms, acknowledgeAlarm } = useAlarms();
   const { currentUser, perms, roleInfo, users, switchUser } = useAuth();
@@ -123,7 +133,7 @@ export function AppShell({ children }: AppShellProps) {
           </div>
           <div className="flex flex-col min-w-0">
             <h1 className="text-xs md:text-sm font-bold tracking-tight text-foreground leading-tight truncate">
-              <span className="hidden sm:inline">โรงพยาบาลศิริราช — </span>ระบบบำบัดน้ำเสีย (WWTP)
+              <span className="hidden sm:inline">{orgNameTh} — </span>ระบบบำบัดน้ำเสีย (WWTP)
             </h1>
             <span className="text-[10px] text-muted-foreground font-mono hidden md:block">
               MAIN CONTROL SYSTEM
