@@ -186,7 +186,9 @@ function BuildingSection({
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {[...equipment.filter(e => e.status === "fault"), ...equipment.filter(e => e.status === "running"), ...equipment.filter(e => e.status === "stopped")].map((eq) => (
+        {/* Fixed order (as configured) rather than grouped by status, so
+            toggling a card on/off doesn't reshuffle its position. */}
+        {equipment.map((eq) => (
           <EquipmentCard
             key={eq.id}
             eq={eq}
