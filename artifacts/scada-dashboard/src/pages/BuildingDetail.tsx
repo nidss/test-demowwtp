@@ -5,7 +5,7 @@ import {
   ArrowLeft, Building2, Activity, Droplets, CheckCircle2,
   AlertTriangle, Cpu, Power, PowerOff, Fan, Settings2, Zap,
   FlaskConical, Gauge, Clock, Waves, Filter,
-  Monitor, ToggleLeft,
+  Monitor, ToggleLeft, Maximize2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AppShell } from "@/components/scada/AppShell";
@@ -18,6 +18,12 @@ import {
 import { ScadaSvgIcon, getTankIconUrl } from "@/components/scada/ScadaIcons";
 import { getSavedDiagram } from "@/components/scada/ScadaDiagramEditor";
 import { DiagramPreview } from "@/components/scada/DiagramPreview";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -331,6 +337,7 @@ export function BuildingDetailContent({
   headerAccessory,
 }: BuildingDetailContentProps) {
   const [, navigate] = useLocation();
+  const [isDiagramFullscreen, setIsDiagramFullscreen] = useState(false);
 
   const status = STATUS_STYLES[live.status];
   const isCritical = live.status === "critical";
@@ -417,6 +424,15 @@ export function BuildingDetailContent({
             icon={Droplets}
             en="PROCESS FLOW DIAGRAM"
             th="แผนผังกระบวนการบำบัด"
+            right={
+              <button
+                type="button"
+                onClick={() => setIsDiagramFullscreen(true)}
+                className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Maximize2 className="h-3.5 w-3.5" /> FULL SCREEN
+              </button>
+            }
           />
           <div className={cn(
             "mt-2 rounded-xl border bg-card p-6",
@@ -427,6 +443,28 @@ export function BuildingDetailContent({
             <DiagramPreview building={config} live={live} height={380} />
           </div>
         </div>
+
+        <Dialog open={isDiagramFullscreen} onOpenChange={setIsDiagramFullscreen}>
+          <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] flex flex-col gap-4 sm:rounded-lg">
+            <DialogTitle className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide">
+              <Droplets className="h-4 w-4 text-primary" />
+              PROCESS FLOW DIAGRAM
+              <span className="text-xs font-normal normal-case text-muted-foreground">
+                · แผนผังกระบวนการบำบัด — {config.nameTh}
+              </span>
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              มุมมองเต็มจอของแผนผังกระบวนการบำบัดน้ำเสียของ {config.nameTh}
+            </DialogDescription>
+            <div className="flex-1 min-h-0 overflow-auto">
+              <DiagramPreview
+                building={config}
+                live={live}
+                height={typeof window !== "undefined" ? window.innerHeight - 260 : 560}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* ── EQUIPMENT ── */}
         <div>
@@ -498,15 +536,19 @@ export function BuildingDetailContent({
 
 // ── Section Title helper ──────────────────────────────────────────────────────
 
-function SectionTitle({ icon: Icon, en, th }: {
+function SectionTitle({ icon: Icon, en, th, right }: {
   icon: React.ComponentType<{ className?: string }>;
   en: string; th: string;
+  right?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <Icon className="h-4 w-4 text-primary" />
-      <span className="text-sm font-bold text-foreground uppercase tracking-wide">{en}</span>
-      <span className="text-xs text-muted-foreground">· {th}</span>
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 text-primary" />
+        <span className="text-sm font-bold text-foreground uppercase tracking-wide">{en}</span>
+        <span className="text-xs text-muted-foreground">· {th}</span>
+      </div>
+      {right}
     </div>
   );
 }
